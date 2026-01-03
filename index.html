@@ -177,21 +177,8 @@
   }
   .modalClose:active{transform:scale(.99)}
   .modalBody{padding:14px;max-height:78vh;overflow:auto;}
-
-  /* ======= FIX RESPONSIVE GRID (NO SE SUPERPONEN) ======= */
-  .mGrid2,
-  .mGrid3{
-    display:grid;
-    gap:10px;
-  }
-  /* auto-ajuste: pasa de 3 -> 2 -> 1 columnas según ancho */
-  .mGrid3{ grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-  .mGrid2{ grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-
-  /* permitir encoger sin overflow en grid */
-  .mGrid2 > * , .mGrid3 > * { min-width:0; }
-  .mInput{ min-width:0; }
-
+  .mGrid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mGrid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
   .mLabel{font-size:12px;color:#9ca3af;margin:0 0 6px 2px;}
   .mInput{
     width:100%;margin:0;padding:12px;border-radius:12px;border:1px solid #1f2937;
@@ -467,6 +454,9 @@
 
   let SETTINGS = loadSettings();
 
+  /* =========================
+     Config dinámica (usa SETTINGS)
+  ========================= */
   let MODES = JSON.parse(JSON.stringify(SETTINGS.modes));
   let FEE_ROUNDTRIP_PCT = SETTINGS.fees.roundTripPct;
 
@@ -495,6 +485,7 @@
   const tpCopyEl = document.getElementById("tpCopy");
   const slCopyEl = document.getElementById("slCopy");
 
+  /* ======= Settings UI refs ======= */
   const settingsBack = document.getElementById("settingsBack");
   const openSettingsBtn = document.getElementById("openSettings");
   const closeSettingsBtn = document.getElementById("closeSettings");
@@ -549,6 +540,23 @@
     });
   }
 
+  /* ======= NUEVO: sync de UI margen (custom apaga botones / botones borran custom) ======= */
+  function isCustomActive(){
+    const cm = parseFloat(mCustomEl.value);
+    return Number.isFinite(cm) && cm > 0;
+  }
+  function syncMarginUI(){
+    if(isCustomActive()){
+      // apaga botones rápidos
+      document.querySelectorAll("#marginRow .btn").forEach(b=> b.classList.remove("active"));
+      mCustomEl.classList.add("activeCustom");
+    }else{
+      mCustomEl.classList.remove("activeCustom");
+      // activa el botón que corresponde a state.margin (si existe)
+      setActive("marginRow","data-margin", String(state.margin));
+    }
+  }
+
   function fmtUSDT(x){
     if(!Number.isFinite(x)) return "—";
     const signClass = x >= 0 ? "pos" : "neg";
@@ -576,9 +584,8 @@
     ruleBadgeEl.textContent =
       `${state.mode.toUpperCase()} | TP ${cfg.tpPct}% | SL ${cfg.slPct}% | Parcial ${cfg.partialPct}% | Lev ${cfg.lev}x`;
 
-    const cm = parseFloat(mCustomEl.value);
-    const customActive = Number.isFinite(cm) && cm > 0;
-    mCustomEl.classList.toggle("activeCustom", customActive);
+    // (mantenemos lo que ya estaba, pero ahora lo hace syncMarginUI también)
+    syncMarginUI();
 
     if(!(entry>0)) {
       qtyCloseEl.textContent = "—";
@@ -675,6 +682,9 @@
     setTimeout(()=> toastEl.textContent = "", 1200);
   }
 
+  /* =========================
+     Settings modal logic
+  ========================= */
   function openSettings(){
     sFee.value = String(SETTINGS.fees.roundTripPct);
     sMMR.value = String(SETTINGS.fees.mmrPct);
@@ -712,7 +722,8 @@
     applyQuickMargins();
     applyShowTexts();
 
-    setActive("marginRow","data-margin", String(state.margin));
+    // en vez de setActive directo, usamos syncMarginUI para respetar custom
+    syncMarginUI();
     calc();
   }
 
@@ -758,6 +769,9 @@
     return next;
   }
 
+  /* =========================
+     Events
+  ========================= */
   document.getElementById("sideSeg").addEventListener("click", (e)=>{
     const btn = e.target.closest(".btn"); if(!btn) return;
     state.side = btn.dataset.side;
@@ -765,17 +779,28 @@
     calc();
   });
 
+  /* ======= CAMBIO CLAVE #1: al tocar botón rápido -> borrar custom ======= */
   document.getElementById("marginRow").addEventListener("click", (e)=>{
     const btn = e.target.closest(".btn"); if(!btn) return;
     const v = parseFloat(btn.dataset.margin);
     if(Number.isFinite(v)){
+      // si elige un botón, custom se borra
+      mCustomEl.value = "";
+      mCustomEl.classList.remove("activeCustom");
+
       state.margin = v;
       setActive("marginRow","data-margin", String(state.margin));
       calc();
     }
   });
 
-  mCustomEl.addEventListener("input", ()=>{ toastEl.textContent=""; calc(); });
+  /* ======= CAMBIO CLAVE #2: al escribir custom -> apagar botones ======= */
+  mCustomEl.addEventListener("input", ()=>{
+    toastEl.textContent="";
+    // si custom > 0, apagamos botones; si queda vacío/0, vuelve a botón activo
+    syncMarginUI();
+    calc();
+  });
 
   document.getElementById("modeSeg").addEventListener("click", (e)=>{
     const btn = e.target.closest(".btn"); if(!btn) return;
@@ -790,6 +815,7 @@
   tpCopyEl.addEventListener("click", ()=> copyPriceFrom(tpPriceEl));
   slCopyEl.addEventListener("click", ()=> copyPriceFrom(slPriceEl));
 
+  /* settings events */
   openSettingsBtn.addEventListener("click", openSettings);
   closeSettingsBtn.addEventListener("click", closeSettings);
   cancelSettingsBtn.addEventListener("click", closeSettings);
@@ -820,10 +846,15 @@
     navigator.serviceWorker.register("./sw.js").catch(()=>{});
   }
 
+  /* =========================
+     Init
+  ========================= */
   applyQuickMargins();
   applyShowTexts();
 
-  setActive("marginRow","data-margin", String(state.margin));
+  // en init, respeta custom si ya hubiese valor (por cache/autocomplete)
+  syncMarginUI();
+
   calc();
 </script>
 </body>
