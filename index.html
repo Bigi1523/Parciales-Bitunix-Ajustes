@@ -541,6 +541,23 @@
     });
   }
 
+  /* ======= NUEVO: controlar selección margen vs custom ======= */
+  function updateMarginUI(){
+    const cm = parseFloat(mCustomEl.value);
+    const customActive = Number.isFinite(cm) && cm > 0;
+
+    // si hay custom => apagar botones (ninguno active)
+    if(customActive){
+      document.querySelectorAll("#marginRow .btn").forEach(b=> b.classList.remove("active"));
+    }else{
+      // si no hay custom => marcar el botón del state.margin
+      setActive("marginRow","data-margin", String(state.margin));
+    }
+
+    // highlight del input custom
+    mCustomEl.classList.toggle("activeCustom", customActive);
+  }
+
   function fmtUSDT(x){
     if(!Number.isFinite(x)) return "—";
     const signClass = x >= 0 ? "pos" : "neg";
@@ -569,9 +586,8 @@
     ruleBadgeEl.textContent =
       `${state.mode.toUpperCase()} | TP ${cfg.tpPct}% | SL ${cfg.slPct}% | Parcial ${cfg.partialPct}% | Lev ${cfg.lev}x`;
 
-    const cm = parseFloat(mCustomEl.value);
-    const customActive = Number.isFinite(cm) && cm > 0;
-    mCustomEl.classList.toggle("activeCustom", customActive);
+    // mantener UI margen consistente
+    updateMarginUI();
 
     if(!(entry>0)) {
       qtyCloseEl.textContent = "—";
@@ -672,7 +688,6 @@
      Settings modal logic
   ========================= */
   function openSettings(){
-    // fill inputs from SETTINGS
     sFee.value = String(SETTINGS.fees.roundTripPct);
     sMMR.value = String(SETTINGS.fees.mmrPct);
     sLiqFee.value = String(SETTINGS.fees.liqCloseFeePct);
@@ -703,15 +718,14 @@
   }
 
   function applySettingsToRuntime(){
-    // update runtime vars
     MODES = JSON.parse(JSON.stringify(SETTINGS.modes));
     FEE_ROUNDTRIP_PCT = SETTINGS.fees.roundTripPct;
 
     applyQuickMargins();
     applyShowTexts();
 
-    // si el margin actual coincide con el botón activo, re-selecciona
-    setActive("marginRow","data-margin", String(state.margin));
+    // refrescar UI de margen (por si custom está activo)
+    updateMarginUI();
     calc();
   }
 
@@ -744,17 +758,13 @@
 
     next.showTexts = !!showTexts.checked;
 
-    // sanity minimal (evitar valores raros)
-    // fees no negativos:
     next.fees.roundTripPct = Math.max(0, next.fees.roundTripPct);
     next.fees.mmrPct = Math.max(0, next.fees.mmrPct);
     next.fees.liqCloseFeePct = Math.max(0, next.fees.liqCloseFeePct);
 
-    // parciales 1..100
     next.modes.ema8.partialPct = Math.min(100, Math.max(1, next.modes.ema8.partialPct));
     next.modes.boll.partialPct = Math.min(100, Math.max(1, next.modes.boll.partialPct));
 
-    // lev mínimo 1
     next.modes.ema8.lev = Math.max(1, next.modes.ema8.lev);
     next.modes.boll.lev = Math.max(1, next.modes.boll.lev);
 
@@ -773,6 +783,11 @@
 
   document.getElementById("marginRow").addEventListener("click", (e)=>{
     const btn = e.target.closest(".btn"); if(!btn) return;
+
+    // NUEVO: si tocas botón 50/75 => borrar custom
+    mCustomEl.value = "";
+    mCustomEl.classList.remove("activeCustom");
+
     const v = parseFloat(btn.dataset.margin);
     if(Number.isFinite(v)){
       state.margin = v;
@@ -781,7 +796,12 @@
     }
   });
 
-  mCustomEl.addEventListener("input", ()=>{ toastEl.textContent=""; calc(); });
+  // NUEVO: al escribir custom => apagar botones
+  mCustomEl.addEventListener("input", ()=>{
+    toastEl.textContent="";
+    updateMarginUI();
+    calc();
+  });
 
   document.getElementById("modeSeg").addEventListener("click", (e)=>{
     const btn = e.target.closest(".btn"); if(!btn) return;
@@ -833,6 +853,7 @@
   applyQuickMargins();
   applyShowTexts();
 
+  updateMarginUI();
   setActive("marginRow","data-margin", String(state.margin));
   calc();
 </script>
