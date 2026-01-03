@@ -145,6 +145,26 @@
   .copyVal:active{transform:scale(.995)}
   .copyIco{font-size:14px;opacity:.65;line-height:1;}
 
+  /* ======= NUEVO: aviso de lado ======= */
+  .sideWarn{
+    margin:-4px 0 12px;
+    padding:10px 12px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.10);
+    background: rgba(0,0,0,.18);
+    font-weight:950;
+    text-align:center;
+    letter-spacing:.2px;
+  }
+  .sideWarn.short{
+    border-color: rgba(239,68,68,.35);
+    background: rgba(127,29,29,.18);
+  }
+  .sideWarn.long{
+    border-color: rgba(34,197,94,.35);
+    background: rgba(22,101,52,.18);
+  }
+
   /* ======= settings modal ======= */
   .modalBack{
     position:fixed;inset:0;
@@ -212,16 +232,11 @@
     </button>
   </div>
 
-  <label class="optText">Lado</label>
-  <div class="seg" id="sideSeg">
-    <div class="btn short active" data-side="short">Short</div>
-    <div class="btn long" data-side="long">Long</div>
-  </div>
-
   <label class="optText">Precio de entrada</label>
   <input id="entry" type="number" inputmode="decimal" step="0.0001" placeholder="Ej: 223.59">
 
   <label class="optText">Margen (USDT)</label>
+  <!-- 3 en una línea: rápido #1 / rápido #2 / custom -->
   <div class="seg" id="marginRow" style="margin-top:6px;">
     <div class="btn active" id="m50" data-margin="50">50</div>
     <div class="btn" id="m75" data-margin="75">75</div>
@@ -233,6 +248,16 @@
     <div class="btn active" data-mode="ema8">EMA8</div>
     <div class="btn" data-mode="boll">Bollinger</div>
   </div>
+
+  <!-- ======= NUEVO ORDEN: Lado debajo de Estrategia ======= -->
+  <label class="optText">Lado</label>
+  <div class="seg" id="sideSeg" style="margin-top:6px;">
+    <div class="btn short active" data-side="short">Short</div>
+    <div class="btn long" data-side="long">Long</div>
+  </div>
+
+  <!-- Aviso grande para evitar errores -->
+  <div class="sideWarn" id="sideWarn">⚠️ Estás en SHORT</div>
 
   <div class="result optText" style="margin-top:6px;" id="ruleCard">
     <div class="small">Regla activa</div>
@@ -485,6 +510,9 @@
   const tpCopyEl = document.getElementById("tpCopy");
   const slCopyEl = document.getElementById("slCopy");
 
+  // NUEVO: aviso de lado
+  const sideWarnEl = document.getElementById("sideWarn");
+
   /* ======= Settings UI refs ======= */
   const settingsBack = document.getElementById("settingsBack");
   const openSettingsBtn = document.getElementById("openSettings");
@@ -540,23 +568,6 @@
     });
   }
 
-  /* ======= NUEVO: sync de UI margen (custom apaga botones / botones borran custom) ======= */
-  function isCustomActive(){
-    const cm = parseFloat(mCustomEl.value);
-    return Number.isFinite(cm) && cm > 0;
-  }
-  function syncMarginUI(){
-    if(isCustomActive()){
-      // apaga botones rápidos
-      document.querySelectorAll("#marginRow .btn").forEach(b=> b.classList.remove("active"));
-      mCustomEl.classList.add("activeCustom");
-    }else{
-      mCustomEl.classList.remove("activeCustom");
-      // activa el botón que corresponde a state.margin (si existe)
-      setActive("marginRow","data-margin", String(state.margin));
-    }
-  }
-
   function fmtUSDT(x){
     if(!Number.isFinite(x)) return "—";
     const signClass = x >= 0 ? "pos" : "neg";
@@ -570,10 +581,34 @@
     return state.margin;
   }
 
+  // Fee aprox “peor caso” usando notional promedio (entrada+salida)/2 * qty
   function feeOnClose(entry, exit, qty){
     const fee = (FEE_ROUNDTRIP_PCT/100);
     const avgNotional = ((entry + exit) / 2) * qty;
     return avgNotional * fee;
+  }
+
+  function syncSideWarn(){
+    const isShort = state.side === "short";
+    sideWarnEl.textContent = `⚠️ Estás en ${isShort ? "SHORT" : "LONG"}`;
+    sideWarnEl.classList.toggle("short", isShort);
+    sideWarnEl.classList.toggle("long", !isShort);
+  }
+
+  // ======= REGLA: custom vs botones rápidos =======
+  function syncMarginUI(){
+    const cm = parseFloat(mCustomEl.value);
+    const customActive = Number.isFinite(cm) && cm > 0;
+
+    mCustomEl.classList.toggle("activeCustom", customActive);
+
+    if(customActive){
+      // “apagar” botones 1/2 cuando hay custom
+      setActive("marginRow","data-margin","__none__");
+    }else{
+      // si no hay custom, marcar el botón activo
+      setActive("marginRow","data-margin", String(state.margin));
+    }
   }
 
   function calc(){
@@ -584,7 +619,7 @@
     ruleBadgeEl.textContent =
       `${state.mode.toUpperCase()} | TP ${cfg.tpPct}% | SL ${cfg.slPct}% | Parcial ${cfg.partialPct}% | Lev ${cfg.lev}x`;
 
-    // (mantenemos lo que ya estaba, pero ahora lo hace syncMarginUI también)
+    syncSideWarn();
     syncMarginUI();
 
     if(!(entry>0)) {
@@ -722,7 +757,7 @@
     applyQuickMargins();
     applyShowTexts();
 
-    // en vez de setActive directo, usamos syncMarginUI para respetar custom
+    // Reaplicar resaltados de margen (respeta custom si existe)
     syncMarginUI();
     calc();
   }
@@ -776,28 +811,29 @@
     const btn = e.target.closest(".btn"); if(!btn) return;
     state.side = btn.dataset.side;
     setActive("sideSeg","data-side", state.side);
+    syncSideWarn();
     calc();
   });
 
-  /* ======= CAMBIO CLAVE #1: al tocar botón rápido -> borrar custom ======= */
+  // ======= margin buttons: si tocas botón, borrar custom =======
   document.getElementById("marginRow").addEventListener("click", (e)=>{
     const btn = e.target.closest(".btn"); if(!btn) return;
     const v = parseFloat(btn.dataset.margin);
     if(Number.isFinite(v)){
-      // si elige un botón, custom se borra
+      state.margin = v;
+
+      // IMPORTANTE: si eliges un botón, se borra custom
       mCustomEl.value = "";
       mCustomEl.classList.remove("activeCustom");
 
-      state.margin = v;
       setActive("marginRow","data-margin", String(state.margin));
       calc();
     }
   });
 
-  /* ======= CAMBIO CLAVE #2: al escribir custom -> apagar botones ======= */
+  // ======= custom input: si hay custom, “apagar” botones =======
   mCustomEl.addEventListener("input", ()=>{
     toastEl.textContent="";
-    // si custom > 0, apagamos botones; si queda vacío/0, vuelve a botón activo
     syncMarginUI();
     calc();
   });
@@ -852,9 +888,11 @@
   applyQuickMargins();
   applyShowTexts();
 
-  // en init, respeta custom si ya hubiese valor (por cache/autocomplete)
-  syncMarginUI();
+  setActive("sideSeg","data-side", state.side);
+  setActive("modeSeg","data-mode", state.mode);
 
+  syncSideWarn();
+  syncMarginUI();
   calc();
 </script>
 </body>
