@@ -177,8 +177,21 @@
   }
   .modalClose:active{transform:scale(.99)}
   .modalBody{padding:14px;max-height:78vh;overflow:auto;}
-  .mGrid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .mGrid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+  /* ======= FIX RESPONSIVE GRID (NO SE SUPERPONEN) ======= */
+  .mGrid2,
+  .mGrid3{
+    display:grid;
+    gap:10px;
+  }
+  /* auto-ajuste: pasa de 3 -> 2 -> 1 columnas según ancho */
+  .mGrid3{ grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .mGrid2{ grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+
+  /* permitir encoger sin overflow en grid */
+  .mGrid2 > * , .mGrid3 > * { min-width:0; }
+  .mInput{ min-width:0; }
+
   .mLabel{font-size:12px;color:#9ca3af;margin:0 0 6px 2px;}
   .mInput{
     width:100%;margin:0;padding:12px;border-radius:12px;border:1px solid #1f2937;
@@ -222,7 +235,6 @@
   <input id="entry" type="number" inputmode="decimal" step="0.0001" placeholder="Ej: 223.59">
 
   <label class="optText">Margen (USDT)</label>
-  <!-- 3 en una línea: 50 / 75 / custom -->
   <div class="seg" id="marginRow" style="margin-top:6px;">
     <div class="btn active" id="m50" data-margin="50">50</div>
     <div class="btn" id="m75" data-margin="75">75</div>
@@ -455,9 +467,6 @@
 
   let SETTINGS = loadSettings();
 
-  /* =========================
-     Config dinámica (usa SETTINGS)
-  ========================= */
   let MODES = JSON.parse(JSON.stringify(SETTINGS.modes));
   let FEE_ROUNDTRIP_PCT = SETTINGS.fees.roundTripPct;
 
@@ -486,7 +495,6 @@
   const tpCopyEl = document.getElementById("tpCopy");
   const slCopyEl = document.getElementById("slCopy");
 
-  /* ======= Settings UI refs ======= */
   const settingsBack = document.getElementById("settingsBack");
   const openSettingsBtn = document.getElementById("openSettings");
   const closeSettingsBtn = document.getElementById("closeSettings");
@@ -541,23 +549,6 @@
     });
   }
 
-  /* ======= NUEVO: controlar selección margen vs custom ======= */
-  function updateMarginUI(){
-    const cm = parseFloat(mCustomEl.value);
-    const customActive = Number.isFinite(cm) && cm > 0;
-
-    // si hay custom => apagar botones (ninguno active)
-    if(customActive){
-      document.querySelectorAll("#marginRow .btn").forEach(b=> b.classList.remove("active"));
-    }else{
-      // si no hay custom => marcar el botón del state.margin
-      setActive("marginRow","data-margin", String(state.margin));
-    }
-
-    // highlight del input custom
-    mCustomEl.classList.toggle("activeCustom", customActive);
-  }
-
   function fmtUSDT(x){
     if(!Number.isFinite(x)) return "—";
     const signClass = x >= 0 ? "pos" : "neg";
@@ -571,7 +562,6 @@
     return state.margin;
   }
 
-  // Fee aprox “peor caso” usando notional promedio (entrada+salida)/2 * qty
   function feeOnClose(entry, exit, qty){
     const fee = (FEE_ROUNDTRIP_PCT/100);
     const avgNotional = ((entry + exit) / 2) * qty;
@@ -586,8 +576,9 @@
     ruleBadgeEl.textContent =
       `${state.mode.toUpperCase()} | TP ${cfg.tpPct}% | SL ${cfg.slPct}% | Parcial ${cfg.partialPct}% | Lev ${cfg.lev}x`;
 
-    // mantener UI margen consistente
-    updateMarginUI();
+    const cm = parseFloat(mCustomEl.value);
+    const customActive = Number.isFinite(cm) && cm > 0;
+    mCustomEl.classList.toggle("activeCustom", customActive);
 
     if(!(entry>0)) {
       qtyCloseEl.textContent = "—";
@@ -684,9 +675,6 @@
     setTimeout(()=> toastEl.textContent = "", 1200);
   }
 
-  /* =========================
-     Settings modal logic
-  ========================= */
   function openSettings(){
     sFee.value = String(SETTINGS.fees.roundTripPct);
     sMMR.value = String(SETTINGS.fees.mmrPct);
@@ -724,8 +712,7 @@
     applyQuickMargins();
     applyShowTexts();
 
-    // refrescar UI de margen (por si custom está activo)
-    updateMarginUI();
+    setActive("marginRow","data-margin", String(state.margin));
     calc();
   }
 
@@ -771,9 +758,6 @@
     return next;
   }
 
-  /* =========================
-     Events
-  ========================= */
   document.getElementById("sideSeg").addEventListener("click", (e)=>{
     const btn = e.target.closest(".btn"); if(!btn) return;
     state.side = btn.dataset.side;
@@ -783,11 +767,6 @@
 
   document.getElementById("marginRow").addEventListener("click", (e)=>{
     const btn = e.target.closest(".btn"); if(!btn) return;
-
-    // NUEVO: si tocas botón 50/75 => borrar custom
-    mCustomEl.value = "";
-    mCustomEl.classList.remove("activeCustom");
-
     const v = parseFloat(btn.dataset.margin);
     if(Number.isFinite(v)){
       state.margin = v;
@@ -796,12 +775,7 @@
     }
   });
 
-  // NUEVO: al escribir custom => apagar botones
-  mCustomEl.addEventListener("input", ()=>{
-    toastEl.textContent="";
-    updateMarginUI();
-    calc();
-  });
+  mCustomEl.addEventListener("input", ()=>{ toastEl.textContent=""; calc(); });
 
   document.getElementById("modeSeg").addEventListener("click", (e)=>{
     const btn = e.target.closest(".btn"); if(!btn) return;
@@ -816,7 +790,6 @@
   tpCopyEl.addEventListener("click", ()=> copyPriceFrom(tpPriceEl));
   slCopyEl.addEventListener("click", ()=> copyPriceFrom(slPriceEl));
 
-  /* settings events */
   openSettingsBtn.addEventListener("click", openSettings);
   closeSettingsBtn.addEventListener("click", closeSettings);
   cancelSettingsBtn.addEventListener("click", closeSettings);
@@ -847,13 +820,9 @@
     navigator.serviceWorker.register("./sw.js").catch(()=>{});
   }
 
-  /* =========================
-     Init
-  ========================= */
   applyQuickMargins();
   applyShowTexts();
 
-  updateMarginUI();
   setActive("marginRow","data-margin", String(state.margin));
   calc();
 </script>
