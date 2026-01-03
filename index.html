@@ -1,0 +1,840 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ajustes Parciales Bitunix</title>
+
+<meta name="theme-color" content="#0b1220">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Parciales">
+
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+
+<style>
+  body{background:#0b1220;color:#e5e7eb;font-family:system-ui;padding:20px;margin:0;}
+  .box{max-width:420px;margin:auto;background:#0f172a;border-radius:14px;padding:18px;}
+
+  /* ======= header + settings ======= */
+  .topRow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;}
+  h1{font-size:16px;margin:0;}
+  .gearBtn{
+    width:40px;height:40px;border-radius:12px;
+    border:1px solid #1f2937;background:#0b1220;color:#e5e7eb;
+    display:grid;place-items:center;cursor:pointer;user-select:none;
+    font-weight:900;
+  }
+  .gearBtn:active{transform:scale(.99)}
+  .gearBtn span{opacity:.9;font-size:18px;line-height:1}
+
+  label{font-size:12px;color:#9ca3af;}
+
+  input{
+    width:100%;margin:6px 0 12px;padding:12px;border-radius:12px;border:none;
+    background:#020617;color:#fff;font-size:16px;
+    outline:none;
+  }
+  input::placeholder{color:#475569;}
+  input.warn{ box-shadow: 0 0 0 2px rgba(239,68,68,.55) inset; }
+
+  .seg{display:flex; gap:10px; margin:8px 0 14px; align-items:stretch;}
+
+  /* Botón base */
+  .btn{
+    flex:1; padding:12px; border-radius:12px;
+    border:1px solid #1f2937;
+    background:#0b1220; color:#e5e7eb;
+    cursor:pointer; user-select:none; text-align:center;
+    font-weight:800;
+  }
+  .btn.active{
+    background:#1f2937;
+    border-color:#334155;
+    box-shadow: 0 0 0 1px rgba(148,163,184,.25) inset;
+  }
+
+  /* Short/Long: colores */
+  .btn.short{ background:#1a0b0b; border-color:#3b1a1a; }
+  .btn.long{  background:#0b1a10; border-color:#1a3b24; }
+
+  .btn.short.active{
+    background:#7f1d1d;
+    border-color:#ef4444;
+    box-shadow: 0 0 0 1px rgba(239,68,68,.25) inset;
+  }
+  .btn.long.active{
+    background:#166534;
+    border-color:#22c55e;
+    box-shadow: 0 0 0 1px rgba(34,197,94,.25) inset;
+  }
+
+  /* Custom margin input inline */
+  .miniInput{
+    flex:1;
+    margin:0;
+    padding:12px;
+    border-radius:12px;
+    border:1px solid #1f2937;
+    background:#020617;
+    color:#fff;
+    font-size:16px;
+    min-width:0;
+  }
+  .miniInput::placeholder{color:#475569;}
+  .miniInput.activeCustom{
+    border-color:#60a5fa;
+    box-shadow: 0 0 0 1px rgba(96,165,250,.35) inset;
+  }
+
+  .result{background:#020617;border-radius:12px;padding:14px;margin-top:10px;}
+  .small{font-size:12px;color:#9ca3af;}
+  .big{font-size:22px;font-weight:900; font-variant-numeric: tabular-nums;}
+  .hint{font-size:12px;color:#9ca3af;margin-top:10px;line-height:1.35;}
+
+  .tp{color:#22c55e;}
+  .sl{color:#ef4444;}
+  .pos{color:#22c55e;}
+  .neg{color:#ef4444;}
+  .muted{color:#9ca3af;}
+
+  .row{display:flex; gap:10px; align-items:stretch;}
+  .copyBtn{
+    padding:12px;
+    border-radius:12px;
+    border:1px solid #1f2937;
+    background:#0b1220;
+    color:#e5e7eb;
+    font-weight:900;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .copyBtn:active{transform:scale(0.99);}
+  .toast{
+    margin-top:8px;
+    font-size:12px;
+    color:#a7f3d0;
+    min-height:16px;
+  }
+
+  /* TP/SL card with pnl on the right */
+  .line2{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:12px;
+  }
+  .line2 .left{min-width:0;}
+  .line2 .right{
+    text-align:right;
+    white-space:nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .pnlTag{font-size:12px;color:#9ca3af;margin-bottom:4px;}
+  .pnlVal{font-size:18px;font-weight:900;}
+
+  /* copiar TP/SL tocando el precio (con icono chico) */
+  .copyVal{
+    display:inline-flex;
+    align-items:baseline;
+    gap:8px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .copyVal:active{transform:scale(.995)}
+  .copyIco{font-size:14px;opacity:.65;line-height:1;}
+
+  /* ======= settings modal ======= */
+  .modalBack{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,.55);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    padding:14px;
+    z-index:50;
+  }
+  .modal{
+    width:min(520px, 100%);
+    background:#0f172a;
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:16px;
+    box-shadow: 0 18px 50px rgba(0,0,0,.5);
+    overflow:hidden;
+  }
+  .modalHead{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:12px 14px;
+    background:#0b1220;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .modalTitle{font-weight:950;}
+  .modalClose{
+    width:38px;height:38px;border-radius:12px;
+    border:1px solid #1f2937;background:#0b1220;color:#e5e7eb;
+    display:grid;place-items:center;cursor:pointer;font-weight:950;
+  }
+  .modalClose:active{transform:scale(.99)}
+  .modalBody{padding:14px;max-height:78vh;overflow:auto;}
+  .mGrid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mGrid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .mLabel{font-size:12px;color:#9ca3af;margin:0 0 6px 2px;}
+  .mInput{
+    width:100%;margin:0;padding:12px;border-radius:12px;border:1px solid #1f2937;
+    background:#020617;color:#fff;font-size:16px;outline:none;
+  }
+  .mInput::placeholder{color:#475569;}
+  .mHint{font-size:12px;color:#9ca3af;margin:10px 2px 0;line-height:1.35;}
+  .mRow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;}
+  .mCheck{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 12px;border-radius:12px;border:1px solid #1f2937;background:#020617;
+  }
+  .mCheck input{margin:0;width:18px;height:18px}
+  .mBtnRow{display:flex;gap:10px;margin-top:14px;}
+  .mBtn{
+    flex:1;padding:12px;border-radius:12px;border:1px solid #1f2937;background:#0b1220;
+    color:#e5e7eb;font-weight:950;cursor:pointer;
+  }
+  .mBtn.primary{background:#1f2937;border-color:#334155;}
+  .mBtn.danger{background:#1a0b0b;border-color:#3b1a1a;}
+  .mBtn:active{transform:scale(.99)}
+</style>
+</head>
+
+<body>
+<div class="box">
+  <div class="topRow">
+    <h1 class="optText" id="titleText">Parciales (Bitunix)</h1>
+    <button class="gearBtn" id="openSettings" type="button" aria-label="Ajustes">
+      <span aria-hidden="true">⚙︎</span>
+    </button>
+  </div>
+
+  <label class="optText">Lado</label>
+  <div class="seg" id="sideSeg">
+    <div class="btn short active" data-side="short">Short</div>
+    <div class="btn long" data-side="long">Long</div>
+  </div>
+
+  <label class="optText">Precio de entrada</label>
+  <input id="entry" type="number" inputmode="decimal" step="0.0001" placeholder="Ej: 223.59">
+
+  <label class="optText">Margen (USDT)</label>
+  <!-- 3 en una línea: 50 / 75 / custom -->
+  <div class="seg" id="marginRow" style="margin-top:6px;">
+    <div class="btn active" id="m50" data-margin="50">50</div>
+    <div class="btn" id="m75" data-margin="75">75</div>
+    <input class="miniInput" id="mCustom" type="number" inputmode="decimal" step="0.01" placeholder="Custom">
+  </div>
+
+  <label class="optText">Estrategia</label>
+  <div class="seg" id="modeSeg">
+    <div class="btn active" data-mode="ema8">EMA8</div>
+    <div class="btn" data-mode="boll">Bollinger</div>
+  </div>
+
+  <div class="result optText" style="margin-top:6px;" id="ruleCard">
+    <div class="small">Regla activa</div>
+    <div class="big" id="ruleBadge">—</div>
+  </div>
+
+  <div class="result">
+    <div class="small optText">Qty a cerrar (COPIAR EN BITUNIX)</div>
+    <div class="row" style="margin-top:8px;">
+      <div class="big" id="qtyClose" style="flex:1;">—</div>
+      <button class="copyBtn" id="copyQtyBtn" type="button">Copiar Qty</button>
+    </div>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <div class="result" id="tpCard">
+    <div class="small optText">TP (limit) <span class="tp">TP</span></div>
+    <div class="line2" style="margin-top:6px;">
+      <div class="left">
+        <div class="big copyVal" id="tpCopy">
+          <span id="tpPrice">—</span>
+          <span class="copyIco" aria-hidden="true">⧉</span>
+        </div>
+      </div>
+      <div class="right">
+        <div class="pnlTag optText">PnL neto</div>
+        <div class="pnlVal" id="tpPnl">—</div>
+      </div>
+    </div>
+    <div class="small muted optText" id="tpNote" style="margin-top:6px;">TP PnL = cierre del parcial</div>
+  </div>
+
+  <div class="result" id="slCard">
+    <div class="small optText">SL (stop) <span class="sl">SL</span></div>
+    <div class="line2" style="margin-top:6px;">
+      <div class="left">
+        <div class="big copyVal" id="slCopy">
+          <span id="slPrice">—</span>
+          <span class="copyIco" aria-hidden="true">⧉</span>
+        </div>
+      </div>
+      <div class="right">
+        <div class="pnlTag optText">PnL neto</div>
+        <div class="pnlVal" id="slPnl">—</div>
+      </div>
+    </div>
+    <div class="small muted optText" id="slNote" style="margin-top:6px;">SL PnL = cierre 100%</div>
+  </div>
+
+  <div class="hint optText" id="modeHint">—</div>
+</div>
+
+<!-- ======= Settings Modal ======= -->
+<div class="modalBack" id="settingsBack" role="dialog" aria-modal="true" aria-label="Ajustes">
+  <div class="modal">
+    <div class="modalHead">
+      <div class="modalTitle">Ajustes</div>
+      <button class="modalClose" id="closeSettings" type="button" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div class="modalBody">
+      <div class="mGrid3">
+        <div>
+          <div class="mLabel">Fee ida+vuelta (%)</div>
+          <input class="mInput" id="sFee" inputmode="decimal" placeholder="0.06">
+        </div>
+        <div>
+          <div class="mLabel">MMR (%)</div>
+          <input class="mInput" id="sMMR" inputmode="decimal" placeholder="1">
+        </div>
+        <div>
+          <div class="mLabel">Fee cierre liq (%)</div>
+          <input class="mInput" id="sLiqFee" inputmode="decimal" placeholder="0.03">
+        </div>
+      </div>
+
+      <div class="mHint">MMR y fee liq no se usan en esta calculadora de “Parciales”, pero quedan guardados para consistencia con tus otras calculadoras.</div>
+
+      <div style="height:12px"></div>
+
+      <div class="mGrid2">
+        <div style="background:#020617;border:1px solid #1f2937;border-radius:12px;padding:12px;">
+          <div class="mLabel" style="margin:0 0 10px 0;">EMA8</div>
+          <div class="mGrid2">
+            <div>
+              <div class="mLabel">TP (%)</div>
+              <input class="mInput" id="eTP" inputmode="decimal" placeholder="0.4">
+            </div>
+            <div>
+              <div class="mLabel">SL (%)</div>
+              <input class="mInput" id="eSL" inputmode="decimal" placeholder="0.4">
+            </div>
+            <div>
+              <div class="mLabel">Parcial (%)</div>
+              <input class="mInput" id="ePar" inputmode="decimal" placeholder="60">
+            </div>
+            <div>
+              <div class="mLabel">Lev (x)</div>
+              <input class="mInput" id="eLev" inputmode="decimal" placeholder="30">
+            </div>
+          </div>
+        </div>
+
+        <div style="background:#020617;border:1px solid #1f2937;border-radius:12px;padding:12px;">
+          <div class="mLabel" style="margin:0 0 10px 0;">Bollinger</div>
+          <div class="mGrid2">
+            <div>
+              <div class="mLabel">TP (%)</div>
+              <input class="mInput" id="bTP" inputmode="decimal" placeholder="0.6">
+            </div>
+            <div>
+              <div class="mLabel">SL (%)</div>
+              <input class="mInput" id="bSL" inputmode="decimal" placeholder="0.5">
+            </div>
+            <div>
+              <div class="mLabel">Parcial (%)</div>
+              <input class="mInput" id="bPar" inputmode="decimal" placeholder="50">
+            </div>
+            <div>
+              <div class="mLabel">Lev (x)</div>
+              <input class="mInput" id="bLev" inputmode="decimal" placeholder="20">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <div class="mGrid3">
+        <div>
+          <div class="mLabel">Margen rápido #1</div>
+          <input class="mInput" id="qM1" inputmode="decimal" placeholder="50">
+        </div>
+        <div>
+          <div class="mLabel">Margen rápido #2</div>
+          <input class="mInput" id="qM2" inputmode="decimal" placeholder="75">
+        </div>
+        <div>
+          <div class="mLabel">Decimales</div>
+          <div class="mGrid2">
+            <div>
+              <div class="mLabel">Precio</div>
+              <input class="mInput" id="dPrice" inputmode="numeric" placeholder="4">
+            </div>
+            <div>
+              <div class="mLabel">Qty</div>
+              <input class="mInput" id="dQty" inputmode="numeric" placeholder="6">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mRow">
+        <label class="mCheck">
+          <input type="checkbox" id="showTexts">
+          <span>Mostrar textos / notas</span>
+        </label>
+      </div>
+
+      <div class="mBtnRow">
+        <button class="mBtn danger" id="resetDefaults" type="button">Defaults</button>
+        <button class="mBtn" id="cancelSettings" type="button">Cancelar</button>
+        <button class="mBtn primary" id="saveSettings" type="button">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* =========================
+     Settings (persistentes)
+  ========================= */
+  const SETTINGS_KEY = "parciales_settings_v1";
+
+  const DEFAULTS = {
+    fees: { roundTripPct: 0.06, mmrPct: 1.0, liqCloseFeePct: 0.03 },
+    modes: {
+      ema8: { tpPct: 0.4, slPct: 0.4, partialPct: 60, lev: 30 },
+      boll: { tpPct: 0.6, slPct: 0.5, partialPct: 50, lev: 20 }
+    },
+    quickMargins: [50, 75],
+    decimals: { price: 4, qty: 6 },
+    showTexts: true
+  };
+
+  function clampInt(n, min, max, fallback){
+    const x = parseInt(n,10);
+    if(!Number.isFinite(x)) return fallback;
+    return Math.min(max, Math.max(min, x));
+  }
+  function numOr(v, fallback){
+    const n = parseFloat(String(v).replace(",", "."));
+    return Number.isFinite(n) ? n : fallback;
+  }
+  function deepMerge(base, patch){
+    const out = JSON.parse(JSON.stringify(base));
+    if(!patch || typeof patch !== "object") return out;
+    for(const k of Object.keys(patch)){
+      if(patch[k] && typeof patch[k] === "object" && !Array.isArray(patch[k])){
+        out[k] = deepMerge(out[k] || {}, patch[k]);
+      } else {
+        out[k] = patch[k];
+      }
+    }
+    return out;
+  }
+  function loadSettings(){
+    try{
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if(!raw) return JSON.parse(JSON.stringify(DEFAULTS));
+      return deepMerge(DEFAULTS, JSON.parse(raw));
+    }catch(_){
+      return JSON.parse(JSON.stringify(DEFAULTS));
+    }
+  }
+  function saveSettingsObj(s){
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  }
+
+  let SETTINGS = loadSettings();
+
+  /* =========================
+     Config dinámica (usa SETTINGS)
+  ========================= */
+  let MODES = JSON.parse(JSON.stringify(SETTINGS.modes));
+  let FEE_ROUNDTRIP_PCT = SETTINGS.fees.roundTripPct;
+
+  let state = {
+    side: "short",
+    margin: SETTINGS.quickMargins[0],
+    customMargin: 0,
+    mode: "ema8"
+  };
+
+  const entryEl   = document.getElementById("entry");
+  const qtyCloseEl= document.getElementById("qtyClose");
+  const tpPriceEl = document.getElementById("tpPrice");
+  const slPriceEl = document.getElementById("slPrice");
+  const tpPnlEl   = document.getElementById("tpPnl");
+  const slPnlEl   = document.getElementById("slPnl");
+  const hintEl    = document.getElementById("modeHint");
+  const ruleBadgeEl = document.getElementById("ruleBadge");
+  const copyBtn   = document.getElementById("copyQtyBtn");
+  const toastEl   = document.getElementById("toast");
+
+  const m50Btn    = document.getElementById("m50");
+  const m75Btn    = document.getElementById("m75");
+  const mCustomEl = document.getElementById("mCustom");
+
+  const tpCopyEl = document.getElementById("tpCopy");
+  const slCopyEl = document.getElementById("slCopy");
+
+  /* ======= Settings UI refs ======= */
+  const settingsBack = document.getElementById("settingsBack");
+  const openSettingsBtn = document.getElementById("openSettings");
+  const closeSettingsBtn = document.getElementById("closeSettings");
+  const cancelSettingsBtn = document.getElementById("cancelSettings");
+  const saveSettingsBtn = document.getElementById("saveSettings");
+  const resetDefaultsBtn = document.getElementById("resetDefaults");
+
+  const sFee = document.getElementById("sFee");
+  const sMMR = document.getElementById("sMMR");
+  const sLiqFee = document.getElementById("sLiqFee");
+
+  const eTP = document.getElementById("eTP");
+  const eSL = document.getElementById("eSL");
+  const ePar = document.getElementById("ePar");
+  const eLev = document.getElementById("eLev");
+
+  const bTP = document.getElementById("bTP");
+  const bSL = document.getElementById("bSL");
+  const bPar = document.getElementById("bPar");
+  const bLev = document.getElementById("bLev");
+
+  const qM1 = document.getElementById("qM1");
+  const qM2 = document.getElementById("qM2");
+
+  const dPrice = document.getElementById("dPrice");
+  const dQty = document.getElementById("dQty");
+
+  const showTexts = document.getElementById("showTexts");
+
+  function applyShowTexts(){
+    document.querySelectorAll(".optText").forEach(el=>{
+      el.style.display = SETTINGS.showTexts ? "" : "none";
+    });
+  }
+
+  function applyQuickMargins(){
+    const m1 = SETTINGS.quickMargins[0];
+    const m2 = SETTINGS.quickMargins[1];
+    m50Btn.dataset.margin = String(m1);
+    m50Btn.textContent = String(m1);
+    m75Btn.dataset.margin = String(m2);
+    m75Btn.textContent = String(m2);
+
+    if(!(state.margin > 0)) state.margin = m1;
+  }
+
+  function setActive(containerId, attr, value){
+    const box = document.getElementById(containerId);
+    box.querySelectorAll(".btn").forEach(b=>{
+      const v = b.getAttribute(attr);
+      b.classList.toggle("active", v === value);
+    });
+  }
+
+  function fmtUSDT(x){
+    if(!Number.isFinite(x)) return "—";
+    const signClass = x >= 0 ? "pos" : "neg";
+    const val = Math.abs(x).toFixed(2);
+    return `<span class="${signClass}">${x<0?'-':''}${val} USDT</span>`;
+  }
+
+  function getMarginUsed(){
+    const cm = parseFloat(mCustomEl.value);
+    if (Number.isFinite(cm) && cm > 0) return cm;
+    return state.margin;
+  }
+
+  // Fee aprox “peor caso” usando notional promedio (entrada+salida)/2 * qty
+  function feeOnClose(entry, exit, qty){
+    const fee = (FEE_ROUNDTRIP_PCT/100);
+    const avgNotional = ((entry + exit) / 2) * qty;
+    return avgNotional * fee;
+  }
+
+  function calc(){
+    const entry = parseFloat(entryEl.value);
+    const cfg = MODES[state.mode];
+    const marginUsed = getMarginUsed();
+
+    ruleBadgeEl.textContent =
+      `${state.mode.toUpperCase()} | TP ${cfg.tpPct}% | SL ${cfg.slPct}% | Parcial ${cfg.partialPct}% | Lev ${cfg.lev}x`;
+
+    const cm = parseFloat(mCustomEl.value);
+    const customActive = Number.isFinite(cm) && cm > 0;
+    mCustomEl.classList.toggle("activeCustom", customActive);
+
+    if(!(entry>0)) {
+      qtyCloseEl.textContent = "—";
+      tpPriceEl.textContent = "—";
+      slPriceEl.textContent = "—";
+      tpPnlEl.textContent   = "—";
+      slPnlEl.textContent   = "—";
+      hintEl.textContent = `Side: ${state.side.toUpperCase()} | Margen: ${marginUsed}`;
+      entryEl.classList.remove("warn");
+      return;
+    }
+
+    const notional = marginUsed * cfg.lev;
+    const qtyTotal = notional / entry;
+    const qtyClose = qtyTotal * (cfg.partialPct/100);
+
+    const tpMove = cfg.tpPct/100;
+    const slMove = cfg.slPct/100;
+
+    let tpPrice, slPrice;
+    if (state.side === "long") {
+      tpPrice = entry * (1 + tpMove);
+      slPrice = entry * (1 - slMove);
+    } else {
+      tpPrice = entry * (1 - tpMove);
+      slPrice = entry * (1 + slMove);
+    }
+
+    const grossTP = (state.side === "long")
+      ? qtyClose * (tpPrice - entry)
+      : qtyClose * (entry - tpPrice);
+
+    const grossSL = (state.side === "long")
+      ? qtyTotal * (slPrice - entry)
+      : qtyTotal * (entry - slPrice);
+
+    const feeTP = feeOnClose(entry, tpPrice, qtyClose);
+    const feeSL = feeOnClose(entry, slPrice, qtyTotal);
+
+    const netTP = grossTP - feeTP;
+    const netSL = grossSL - feeSL;
+
+    const decQty = clampInt(SETTINGS.decimals.qty, 0, 10, 6);
+    const decPrice = clampInt(SETTINGS.decimals.price, 0, 10, 4);
+
+    qtyCloseEl.textContent = qtyClose.toFixed(decQty);
+    tpPriceEl.textContent  = tpPrice.toFixed(decPrice);
+    slPriceEl.textContent  = slPrice.toFixed(decPrice);
+
+    tpPnlEl.innerHTML = fmtUSDT(netTP);
+    slPnlEl.innerHTML = fmtUSDT(netSL);
+
+    hintEl.textContent =
+      `Side: ${state.side.toUpperCase()} | Margen: ${marginUsed} | Qty total: ${qtyTotal.toFixed(decQty)}`;
+
+    entryEl.classList.remove("warn");
+  }
+
+  async function copyQty(){
+    const text = qtyCloseEl.textContent.trim();
+    if(text === "—" || !text) return;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      toastEl.textContent = "✅ Qty copiada";
+    } catch (e) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      toastEl.textContent = "✅ Qty copiada";
+    }
+    setTimeout(()=> toastEl.textContent = "", 1200);
+  }
+
+  async function copyPriceFrom(el){
+    const text = (el.textContent || "").trim();
+    if(!text || text === "—") return;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      toastEl.textContent = "✅ Copiado";
+    } catch (e) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      toastEl.textContent = "✅ Copiado";
+    }
+    setTimeout(()=> toastEl.textContent = "", 1200);
+  }
+
+  /* =========================
+     Settings modal logic
+  ========================= */
+  function openSettings(){
+    // fill inputs from SETTINGS
+    sFee.value = String(SETTINGS.fees.roundTripPct);
+    sMMR.value = String(SETTINGS.fees.mmrPct);
+    sLiqFee.value = String(SETTINGS.fees.liqCloseFeePct);
+
+    eTP.value = String(SETTINGS.modes.ema8.tpPct);
+    eSL.value = String(SETTINGS.modes.ema8.slPct);
+    ePar.value = String(SETTINGS.modes.ema8.partialPct);
+    eLev.value = String(SETTINGS.modes.ema8.lev);
+
+    bTP.value = String(SETTINGS.modes.boll.tpPct);
+    bSL.value = String(SETTINGS.modes.boll.slPct);
+    bPar.value = String(SETTINGS.modes.boll.partialPct);
+    bLev.value = String(SETTINGS.modes.boll.lev);
+
+    qM1.value = String(SETTINGS.quickMargins[0]);
+    qM2.value = String(SETTINGS.quickMargins[1]);
+
+    dPrice.value = String(SETTINGS.decimals.price);
+    dQty.value = String(SETTINGS.decimals.qty);
+
+    showTexts.checked = !!SETTINGS.showTexts;
+
+    settingsBack.style.display = "flex";
+  }
+
+  function closeSettings(){
+    settingsBack.style.display = "none";
+  }
+
+  function applySettingsToRuntime(){
+    // update runtime vars
+    MODES = JSON.parse(JSON.stringify(SETTINGS.modes));
+    FEE_ROUNDTRIP_PCT = SETTINGS.fees.roundTripPct;
+
+    applyQuickMargins();
+    applyShowTexts();
+
+    // si el margin actual coincide con el botón activo, re-selecciona
+    setActive("marginRow","data-margin", String(state.margin));
+    calc();
+  }
+
+  function readModalToSettings(){
+    const next = JSON.parse(JSON.stringify(SETTINGS));
+
+    next.fees.roundTripPct = numOr(sFee.value, DEFAULTS.fees.roundTripPct);
+    next.fees.mmrPct = numOr(sMMR.value, DEFAULTS.fees.mmrPct);
+    next.fees.liqCloseFeePct = numOr(sLiqFee.value, DEFAULTS.fees.liqCloseFeePct);
+
+    next.modes.ema8.tpPct = numOr(eTP.value, DEFAULTS.modes.ema8.tpPct);
+    next.modes.ema8.slPct = numOr(eSL.value, DEFAULTS.modes.ema8.slPct);
+    next.modes.ema8.partialPct = numOr(ePar.value, DEFAULTS.modes.ema8.partialPct);
+    next.modes.ema8.lev = numOr(eLev.value, DEFAULTS.modes.ema8.lev);
+
+    next.modes.boll.tpPct = numOr(bTP.value, DEFAULTS.modes.boll.tpPct);
+    next.modes.boll.slPct = numOr(bSL.value, DEFAULTS.modes.boll.slPct);
+    next.modes.boll.partialPct = numOr(bPar.value, DEFAULTS.modes.boll.partialPct);
+    next.modes.boll.lev = numOr(bLev.value, DEFAULTS.modes.boll.lev);
+
+    const m1 = numOr(qM1.value, DEFAULTS.quickMargins[0]);
+    const m2 = numOr(qM2.value, DEFAULTS.quickMargins[1]);
+    next.quickMargins = [
+      (m1>0 ? m1 : DEFAULTS.quickMargins[0]),
+      (m2>0 ? m2 : DEFAULTS.quickMargins[1])
+    ];
+
+    next.decimals.price = clampInt(dPrice.value, 0, 10, DEFAULTS.decimals.price);
+    next.decimals.qty = clampInt(dQty.value, 0, 10, DEFAULTS.decimals.qty);
+
+    next.showTexts = !!showTexts.checked;
+
+    // sanity minimal (evitar valores raros)
+    // fees no negativos:
+    next.fees.roundTripPct = Math.max(0, next.fees.roundTripPct);
+    next.fees.mmrPct = Math.max(0, next.fees.mmrPct);
+    next.fees.liqCloseFeePct = Math.max(0, next.fees.liqCloseFeePct);
+
+    // parciales 1..100
+    next.modes.ema8.partialPct = Math.min(100, Math.max(1, next.modes.ema8.partialPct));
+    next.modes.boll.partialPct = Math.min(100, Math.max(1, next.modes.boll.partialPct));
+
+    // lev mínimo 1
+    next.modes.ema8.lev = Math.max(1, next.modes.ema8.lev);
+    next.modes.boll.lev = Math.max(1, next.modes.boll.lev);
+
+    return next;
+  }
+
+  /* =========================
+     Events
+  ========================= */
+  document.getElementById("sideSeg").addEventListener("click", (e)=>{
+    const btn = e.target.closest(".btn"); if(!btn) return;
+    state.side = btn.dataset.side;
+    setActive("sideSeg","data-side", state.side);
+    calc();
+  });
+
+  document.getElementById("marginRow").addEventListener("click", (e)=>{
+    const btn = e.target.closest(".btn"); if(!btn) return;
+    const v = parseFloat(btn.dataset.margin);
+    if(Number.isFinite(v)){
+      state.margin = v;
+      setActive("marginRow","data-margin", String(state.margin));
+      calc();
+    }
+  });
+
+  mCustomEl.addEventListener("input", ()=>{ toastEl.textContent=""; calc(); });
+
+  document.getElementById("modeSeg").addEventListener("click", (e)=>{
+    const btn = e.target.closest(".btn"); if(!btn) return;
+    state.mode = btn.dataset.mode;
+    setActive("modeSeg","data-mode", state.mode);
+    calc();
+  });
+
+  entryEl.addEventListener("input", ()=>{ toastEl.textContent=""; calc(); });
+  copyBtn.addEventListener("click", copyQty);
+
+  tpCopyEl.addEventListener("click", ()=> copyPriceFrom(tpPriceEl));
+  slCopyEl.addEventListener("click", ()=> copyPriceFrom(slPriceEl));
+
+  /* settings events */
+  openSettingsBtn.addEventListener("click", openSettings);
+  closeSettingsBtn.addEventListener("click", closeSettings);
+  cancelSettingsBtn.addEventListener("click", closeSettings);
+
+  settingsBack.addEventListener("click", (e)=>{
+    if(e.target === settingsBack) closeSettings();
+  });
+
+  saveSettingsBtn.addEventListener("click", ()=>{
+    SETTINGS = readModalToSettings();
+    saveSettingsObj(SETTINGS);
+    applySettingsToRuntime();
+    toastEl.textContent = "✅ Ajustes guardados";
+    setTimeout(()=> toastEl.textContent = "", 1200);
+    closeSettings();
+  });
+
+  resetDefaultsBtn.addEventListener("click", ()=>{
+    SETTINGS = JSON.parse(JSON.stringify(DEFAULTS));
+    saveSettingsObj(SETTINGS);
+    applySettingsToRuntime();
+    toastEl.textContent = "✅ Defaults restaurados";
+    setTimeout(()=> toastEl.textContent = "", 1200);
+    closeSettings();
+  });
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js").catch(()=>{});
+  }
+
+  /* =========================
+     Init
+  ========================= */
+  applyQuickMargins();
+  applyShowTexts();
+
+  setActive("marginRow","data-margin", String(state.margin));
+  calc();
+</script>
+</body>
+</html>
